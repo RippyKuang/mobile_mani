@@ -1,0 +1,144 @@
+<mujoco model="ridgeback">
+  <compiler angle="radian" meshdir="../meshes/"/>
+
+  <default>
+    <default class ="wheel">
+       <joint damping="0.05" armature="0.01" frictionloss="0.5"/>
+    </default>
+
+    <default class ="size3">
+       <joint damping="2" armature="0.1" frictionloss="0.5"/>
+    </default>
+
+    <default class ="size1">
+       <joint damping="0.5" armature="0.01" frictionloss="0.5"/>
+    </default>
+
+    <motor nsample="5" delay="0.01" />
+  </default>
+
+  <asset>
+    <mesh name="rocker" content_type="model/stl" file="base/rocker.stl"/>
+    <mesh name="wheel" content_type="model/stl" file="base/wheel.stl"/>
+    <mesh name="body" content_type="model/stl" file="base/body.stl"/>
+    <mesh name="body-collision" content_type="model/stl" file="base/body-collision.stl"/>
+    <mesh name="side-cover" content_type="model/stl" file="base/side-cover.stl"/>
+    <mesh name="end-cover" content_type="model/stl" file="base/end-cover.stl"/>
+    <mesh name="lights" content_type="model/stl" file="base/lights.stl"/>
+    <mesh name="top" content_type="model/stl" file="base/top.stl"/>
+    <mesh name="axle" content_type="model/stl" file="base/axle.stl"/>
+    <mesh name="base" content_type="model/stl" file="ur5/collision/base.stl"/>
+    <mesh name="shoulder" content_type="model/stl" file="ur5/collision/shoulder.stl"/>
+    <mesh name="upperarm" content_type="model/stl" file="ur5/collision/upperarm.stl"/>
+    <mesh name="forearm" content_type="model/stl" file="ur5/collision/forearm.stl"/>
+    <mesh name="wrist1" content_type="model/stl" file="ur5/collision/wrist1.stl"/>
+    <mesh name="wrist2" content_type="model/stl" file="ur5/collision/wrist2.stl"/>
+    <mesh name="wrist3" content_type="model/stl" file="ur5/collision/wrist3.stl"/>
+  </asset>
+
+  <worldbody>
+    <body name="chassis_link">
+      <inertial pos="0.0102225 0.00170208 0.0741641" quat="0.00408113 0.717882 0.00301223 0.696146" mass="194.068" diaginertia="10.592 7.24821 6.00971"/>
+      <joint name="base_link_joint" type="free"/>
+      <geom pos="0 0 0" quat="1 0 0 0" type="mesh" contype="0" conaffinity="0" group="1" rgba="0.15 0.15 0.15 1" density="0" mesh="body"/>
+      <geom pos="0 0 0" quat="1 0 0 0" type="mesh" rgba="0.15 0.15 0.15 1" mesh="body-collision"/>
+      <geom pos="0 0 0" quat="1 0 0 0" type="mesh" contype="0" conaffinity="0" group="1" rgba="0.8 0.8 0 1" density="0" mesh="side-cover"/>
+      <geom pos="0 0 0" quat="0 0 0 1" type="mesh" contype="0" conaffinity="0" group="1" rgba="0.8 0.8 0 1" density="0" mesh="side-cover"/>
+      <geom pos="0 0 0" quat="1 0 0 0" type="mesh" contype="0" conaffinity="0" group="1" rgba="0.15 0.15 0.15 1" density="0" mesh="end-cover"/>
+      <geom pos="0 0 0" quat="0 0 0 1" type="mesh" contype="0" conaffinity="0" group="1" rgba="0.15 0.15 0.15 1" density="0" mesh="end-cover"/>
+      <geom pos="0 0 0" quat="1 0 0 0" type="mesh" contype="0" conaffinity="0" group="1" rgba="0.9 0.9 0.9 1" density="0" mesh="lights"/>
+      <geom pos="0 0 0" quat="0 0 0 1" type="mesh" contype="0" conaffinity="0" group="1" rgba="0.8 0 0 1" density="0" mesh="lights"/>
+      <geom pos="0 0 0" quat="1 0 0 0" type="mesh" contype="0" conaffinity="0" group="1" rgba="0.15 0.15 0.15 1" density="0" mesh="top"/>
+      <geom pos="0 0 0" quat="1 0 0 0" type="mesh" rgba="0.15 0.15 0.15 1" mesh="top"/>
+      <frame pos="0 0 0.05">
+        <geom quat="0.707107 0 0.707107 0" type="mesh" contype="0" conaffinity="0" group="1" rgba="0.15 0.15 0.15 1" density="0" mesh="axle"/>
+        <frame pos="0.319 0 0">
+          <geom quat="0.5 0.5 0.5 0.5" type="mesh" contype="0" conaffinity="0" group="1" rgba="0.15 0.15 0.15 1" density="0" mesh="rocker"/>
+          <body name="front_left_wheel_link" class="wheel" pos="0 0.2755 0">
+            <inertial pos="0 0 0" quat="0.707107 0 0 0.707107" mass="2.3" diaginertia="0.0066424 0.0033212 0.0033212"/>
+            <joint name="front_left_wheel" axis="0 1 0"/>
+            <geom quat="0.707107 0.707107 0 0" type="mesh" contype="0" conaffinity="0" group="1" rgba="0.15 0.15 0.15 1" density="0" mesh="wheel"/>
+            <geom size="0.0759 0.0395" quat="0.707107 0.707107 0 0" friction="0.5 0.005 0.02"  type="cylinder" rgba="0.15 0.15 0.15 1"/>
+          </body>
+          <body name="front_right_wheel_link" pos="0 -0.2755 0">
+            <inertial pos="0 0 0" quat="0.707107 0 0 0.707107" mass="2.3" diaginertia="0.0066424 0.0033212 0.0033212"/>
+            <joint name="front_right_wheel" class="wheel"  axis="0 1 0"/>
+            <geom quat="0.707107 0.707107 0 0" type="mesh" contype="0" conaffinity="0" group="1" rgba="0.15 0.15 0.15 1" density="0" mesh="wheel"/>
+            <geom size="0.0759 0.0395" quat="0.707107 0.707107 0 0" friction="0.5 0.005 0.02"  type="cylinder" rgba="0.15 0.15 0.15 1"/>
+          </body>
+        </frame>
+        <frame pos="-0.319 0 0">
+          <geom quat="0.5 0.5 0.5 0.5" type="mesh" contype="0" conaffinity="0" group="1" rgba="0.15 0.15 0.15 1" density="0" mesh="rocker"/>
+          <body name="rear_left_wheel_link" pos="0 0.2755 0">
+            <inertial pos="0 0 0" quat="0.707107 0 0 0.707107" mass="2.3" diaginertia="0.0066424 0.0033212 0.0033212"/>
+            <joint name="rear_left_wheel" class="wheel" axis="0 1 0"/>
+            <geom quat="0.707107 0.707107 0 0" type="mesh" contype="0" conaffinity="0" group="1" rgba="0.15 0.15 0.15 1" density="0" mesh="wheel"/>
+            <geom size="0.0759 0.0395" quat="0.707107 0.707107 0 0" friction="0.5 0.005 0.02" type="cylinder" rgba="0.15 0.15 0.15 1"/>
+          </body>
+          <body name="rear_right_wheel_link" pos="0 -0.2755 0">
+            <inertial pos="0 0 0" quat="0.707107 0 0 0.707107" mass="2.3" diaginertia="0.0066424 0.0033212 0.0033212"/>
+            <joint name="rear_right_wheel" class="wheel" axis="0 1 0"/>
+            <geom quat="0.707107 0.707107 0 0" type="mesh" contype="0" conaffinity="0" group="1" rgba="0.15 0.15 0.15 1" density="0" mesh="wheel"/>
+            <geom size="0.0759 0.0395" quat="0.707107 0.707107 0 0" friction="0.5 0.005 0.02" type="cylinder" rgba="0.15 0.15 0.15 1"/>
+          </body>
+        </frame>
+      </frame>
+      <frame pos="0.2085 -0.2902 0.1681"/>
+      <frame pos="0 0 0.28">
+        <frame quat="0 0 0 1">
+          <geom quat="0 0 0 1" type="mesh" mesh="base"/>
+          <body name="ur_arm_shoulder_link" pos="0 0 0.089159">
+            <inertial pos="0 0 0" mass="3.7" diaginertia="0.0149724 0.0149724 0.0104063"/>
+            <joint name="ur_arm_shoulder_pan_joint" class ="size3" range="-6.28319 6.28319" actuatorfrcrange="-150 150"/>
+            <geom quat="0 0 0 1" type="mesh" mesh="shoulder"/>
+            <body name="ur_arm_upper_arm_link" quat="0.707107 0.707107 0 0">
+              <inertial pos="-0.2125 0 0.136" quat="0.5 0.5 0.5 0.5" mass="8.393" diaginertia="0.133886 0.133886 0.0151074"/>
+              <joint name="ur_arm_shoulder_lift_joint" class ="size3" range="-6.28319 6.28319" actuatorfrcrange="-150 150"/>
+              <geom pos="0 0 0.13585" quat="0.5 0.5 -0.5 -0.5" type="mesh" mesh="upperarm"/>
+              <body name="ur_arm_forearm_link" pos="-0.425 0 0">
+                <inertial pos="-0.196125 0 0.0165" quat="0.5 0.5 0.5 0.5" mass="2.275" diaginertia="0.0312168 0.0312168 0.004095"/>
+                <joint name="ur_arm_elbow_joint" class ="size3" range="-3.14159 3.14159" actuatorfrcrange="-150 150"/>
+                <geom pos="0 0 0.0165" quat="0.5 0.5 -0.5 -0.5" type="mesh" mesh="forearm"/>
+                <body name="ur_arm_wrist_1_link" pos="-0.39225 0 0.10915">
+                  <inertial pos="0 0 0" quat="0.5 0.5 -0.5 0.5" mass="1.219" diaginertia="0.0021942 0.00201389 0.00201389"/>
+                  <joint name="ur_arm_wrist_1_joint" class ="size1" range="-6.28319 6.28319" actuatorfrcrange="-28 28"/>
+                  <geom pos="0 0 -0.093" quat="0.707107 0.707107 0 0" type="mesh" mesh="wrist1"/>
+                  <body name="ur_arm_wrist_2_link" pos="0 -0.09465 -1.9413e-11" quat="0.707107 0.707107 0 0">
+                    <inertial pos="0 0 0" quat="0.5 0.5 -0.5 0.5" mass="1.219" diaginertia="0.0021942 0.00183104 0.00183104"/>
+                    <joint name="ur_arm_wrist_2_joint" class ="size1" range="-6.28319 6.28319" actuatorfrcrange="-28 28"/>
+                    <geom pos="0 0 -0.095" quat="1 0 0 0" type="mesh" mesh="wrist2"/>
+                    <body name="ur_arm_wrist_3_link" pos="0 0.0823 -1.688e-11" quat="0.707107 -0.707107 0 0">
+                      <inertial pos="0 0 -0.01525" quat="0.5 0.5 -0.5 0.5" mass="0.1879" diaginertia="0.000132117 8.06247e-05 8.06247e-05"/>
+                      <joint name="ur_arm_wrist_3_joint" class ="size1" range="-6.28319 6.28319" actuatorfrcrange="-28 28"/>
+                      <geom pos="0 0 -0.0818" quat="0.707107 0.707107 0 0" type="mesh" mesh="wrist3"/>
+                      <frame quat="0.5 -0.5 -0.5 -0.5">
+                        <frame quat="0.5 0.5 0.5 0.5"/>
+                      </frame>
+                    </body>
+                  </body>
+                </body>
+              </body>
+            </body>
+          </body>
+        </frame>
+        <frame quat="0 0 0 1"/>
+      </frame>
+    </body>
+  </worldbody>
+
+  <actuator>
+ 
+    <motor name="front_left_wheel_motor"  joint="front_left_wheel"  ctrlrange="-35 35" ctrllimited="true"/>
+    <motor name="front_right_wheel_motor" joint="front_right_wheel" ctrlrange="-35 35" ctrllimited="true"/>
+    <motor name="rear_left_wheel_motor"   joint="rear_left_wheel"   ctrlrange="-35 35" ctrllimited="true"/>
+    <motor name="rear_right_wheel_motor"  joint="rear_right_wheel"  ctrlrange="-35 35" ctrllimited="true"/>
+
+    <motor name="ur_arm_shoulder_pan_motor"  joint="ur_arm_shoulder_pan_joint"  ctrlrange="-150 150" ctrllimited="true"/>
+    <motor name="ur_arm_shoulder_lift_motor" joint="ur_arm_shoulder_lift_joint" ctrlrange="-150 150" ctrllimited="true"/>
+    <motor name="ur_arm_elbow_motor"         joint="ur_arm_elbow_joint"         ctrlrange="-150 150" ctrllimited="true"/>
+
+    <motor name="ur_arm_wrist_1_motor" joint="ur_arm_wrist_1_joint" ctrlrange="-28 28" ctrllimited="true"/>
+    <motor name="ur_arm_wrist_2_motor" joint="ur_arm_wrist_2_joint" ctrlrange="-28 28" ctrllimited="true"/>
+    <motor name="ur_arm_wrist_3_motor" joint="ur_arm_wrist_3_joint" ctrlrange="-28 28" ctrllimited="true"/>
+  </actuator>
+</mujoco>
