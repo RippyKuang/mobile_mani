@@ -13,8 +13,9 @@ add_executable(run run.cc)
 target_include_directories(run PUBLIC
                           "${PROJECT_BINARY_DIR}"
                           "${PROJECT_SOURCE_DIR}/simulate"
+                          "${PROJECT_SOURCE_DIR}/simulate/mujoco"
                           ${RBDL_INCLUDE_DIR} 
                           ${EIGEN3_INCLUDE_DIR} 
                           )
 
-target_link_libraries(run PUBLIC libmujoco_simulate ${RBDL_LIBRARY} ${RBDL_URDFREADER_LIBRARY})
+target_link_libraries(run PUBLIC mj ${RBDL_LIBRARY} ${RBDL_URDFREADER_LIBRARY})
