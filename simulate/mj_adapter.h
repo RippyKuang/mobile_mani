@@ -9,6 +9,9 @@ struct Observation
 {
     std::vector<double> qpos;
     std::vector<double> qvel;
+    // End-effector (ur_arm_wrist_3_link) position in the world frame, straight from
+    // MuJoCo. Used only to cross-check the RBDL forward kinematics inside the WBC.
+    std::vector<double> ee_pos;
 };
 
 struct Command

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <array>
 #include <memory>
 #include <vector>
 #include <string>
@@ -23,10 +24,26 @@ struct WBCConfig {
     double kp_posture = 30.0;
     double kd_posture = 8.0;
 
-    // Base Task gains
-    double kp_base = 5000.0;
-    double kd_base = 50.0;
-    double ki_base = 500.0;
+    // Base Task gains. The base task lives in the *body* frame: a differential
+    // drive can only push forward and turn, so the planar error is projected onto
+    // the heading. Both rows are accelerations, hence kp in 1/s^2 and kd in 1/s.
+    double kp_base_x = 4.0;       // 1/s^2
+    double kd_base_x = 4.0;       // 1/s
+    double ki_base_x = 0.5;       // 1/s^3
+    double kp_base_yaw = 3.0;     // 1/s^2 (low: the yaw plant is stiction dominated)
+    double kd_base_yaw = 3.0;     // 1/s
+    double ki_base_yaw = 1.0;     // 1/s^3
+    double base_acc_limit = 10.0; // clamp on the base task desired accel (m/s^2, rad/s^2);
+                              // the position loop does not need qdd_max and a huge value
+                              // only makes it steal the wheel torque budget
+    // A differential drive cannot accelerate sideways. If the QP is allowed to use the
+    // base's lateral DOF, the end-effector task will "cheat" by asking the base to slide
+    // sideways, which the wheels physically cannot do -> wheel slip, base drift and the
+    // end effector never catches up. Enforce it as a hard constraint on every level.
+    double base_lateral_acc_max = 0.5; // m/s^2, tolerance around zero lateral accel
+    double base_int_limit = 25.0; // clamp on each integral contribution (accel units);
+                              // must be large enough that ki*integral can reach the skid
+                              // breakaway torque (~26 Nm of differential => 24 rad/s^2)
 
     // Joint velocity damping
     double kd_arm = 2.0;
@@ -36,6 +53,24 @@ struct WBCConfig {
     double qdd_max = 40.0;        // Max joint acceleration (rad/s^2)
     double tau_arm_max = 150.0;   // Max arm torque (Nm)
     double tau_wheel_max = 35.0;  // Max wheel torque (Nm)
+
+    // Skid-steer traction model. Measured on this MuJoCo model: a differential wheel
+    // torque below ~25 Nm only creeps (0.03 rad/s) while above ~28 Nm the wheels break
+    // loose (wheelspin 50-200 rad/s) and the base drifts 0.3-1.1 m, so the useful
+    // window is narrow. The rigid-body model has no skid friction at all, so the
+    // torque computed from Izz*qddot is always far below the stiction threshold --
+    // tau_scrub_ff supplies the missing friction feed-forward.
+    double tau_scrub_ff = 13.5;  // differential torque feed-forward for skid stiction (Nm);
+                              // the effective mu is now 0.5 (floor set explicitly), which puts
+                              // the skid breakaway at ~13 Nm instead of ~26 Nm
+    double yaw_rate_deadband = 0.05; // rad/s, smooths the sign() of the feed-forward
+    double tau_diff_max = 30.0;   // Max |differential| wheel torque (Nm)
+    double yaw_torque_gain = 1.0; // Maps yaw moment demand to wheel torque (tune 0.7-1.2)
+    // The floor now declares friction explicitly in scene.xml, so the wheels' 0.5 is
+    // no longer overridden by MuJoCo's element-wise max() combination rule.
+    double wheel_friction = 0.5;  // Effective friction coefficient for the traction cap
+    double wheel_load_fraction = 0.25; // Static load share per wheel
+    double robot_mass = 220.3;    // kg, used for the per-wheel normal force
 
     // Flat ground constraint (enforce chassis z, roll, pitch accelerations = 0)
     bool enforce_ground_plane = true;
@@ -55,9 +90,11 @@ struct WBCTarget {
     // Nominal arm posture (6 DOFs)
     Eigen::Matrix<double, 6, 1> arm_q_nom = (Eigen::Matrix<double, 6, 1>() << 0.0, -1.0, 1.5, -0.5, 0.0, 0.0).finished();
 
-    // Base target (x, y, yaw)
+    // Base target (x, y, yaw) plus optional velocity feed-forward
     Eigen::Vector2d base_pos_des = Eigen::Vector2d::Zero();
     double base_yaw_des = 0.0;
+    double base_yaw_rate_des = 0.0;    // rad/s, feed-forward (removes ramp lag)
+    double base_forward_vel_des = 0.0; // m/s, body frame, feed-forward
 
     bool use_orientation = true;
 };
@@ -76,9 +113,12 @@ public:
     // Target setters
     void setTarget(const WBCTarget &target) { target_ = target; }
     void setEETarget(const Eigen::Vector3d &pos, const Eigen::Matrix3d &rot = Eigen::Matrix3d::Identity(),
-                     const Eigen::Vector3d &vel = Eigen::Vector3d::Zero());
+                     const Eigen::Vector3d &vel = Eigen::Vector3d::Zero(),
+                     bool use_orientation = true);
     void setArmNominalPosture(const Eigen::Matrix<double, 6, 1> &q_nom);
     void setBaseTarget(const Eigen::Vector2d &pos, double yaw);
+    // Feed-forward overload: yaw_rate/forward_vel remove the lag of a ramp reference.
+    void setBaseTarget(const Eigen::Vector2d &pos, double yaw, double yaw_rate, double forward_vel = 0.0);
 
     // Solve WBC HQP and compute MuJoCo actuator Command
     Command solve(double dt);
@@ -96,12 +136,27 @@ public:
     Eigen::Matrix<double, 6, 1> getArmQ() const;
     Eigen::Matrix<double, 6, 1> getArmQDot() const;
 
+    // Wheel states are telemetry only: the wheels are welded in the RBDL model,
+    // so they have no generalized coordinates. Values come straight from MuJoCo.
+    Eigen::Matrix<double, 4, 1> getWheelQDot() const { return wheel_qdot_; }
+    Eigen::Matrix<double, 4, 1> getWheelQ() const { return wheel_qpos_; }
+
     const RigidBodyDynamics::Model& getModel() const { return *model_; }
     WBCConfig& config() { return config_; }
     const WBCConfig& config() const { return config_; }
     const WBCTarget& target() const { return target_; }
 
 private:
+    // Resolve and check the RBDL model layout (floating base + 6 arm joints).
+    bool validateModelLayout();
+
+    // Peak wheel torque the tyre can transmit before slipping: mu * N * r.
+    double wheel_traction_torque() const
+    {
+        const double normal_force = config_.robot_mass * 9.81 * config_.wheel_load_fraction;
+        return config_.wheel_friction * normal_force * wheel_radius_;
+    }
+
     std::unique_ptr<RigidBodyDynamics::Model> model_;
     std::unique_ptr<HQPSolver> hqp_solver_;
 
@@ -115,16 +170,27 @@ private:
     RigidBodyDynamics::Math::MatrixNd M_;
     RigidBodyDynamics::Math::VectorNd h_;
 
-    // Body IDs
-    unsigned int base_body_id_ = 2; // chassis_link
-    unsigned int ee_body_id_ = 12;  // ur_arm_wrist_3_link
+    // Model layout: 12 DoF = floating base (6) + arm (6); wheels are welded.
+    // q layout: [0..2]=base xyz, [3..5]=quat xyz, [6..11]=arm, [12]=quat w (RBDL 3.x).
+    int nv_ = 0;
+    std::array<int, 6> arm_q_idx_{};
+    std::array<int, 6> arm_dof_idx_{};
+
+    // Body IDs (resolved by name in validateModelLayout(), never hard-coded)
+    unsigned int base_body_id_ = 0;
+    unsigned int ee_body_id_ = 0;
     RigidBodyDynamics::Math::Vector3d ee_point_offset_ = RigidBodyDynamics::Math::Vector3d::Zero();
 
     // Mechanical parameters for Ridgeback
     double wheel_radius_ = 0.0759;
     double track_half_width_ = 0.2755; // dy
+
+    // Wheel telemetry from MuJoCo (no generalized coordinates in the model)
+    Eigen::Matrix<double, 4, 1> wheel_qpos_ = Eigen::Matrix<double, 4, 1>::Zero();
+    Eigen::Matrix<double, 4, 1> wheel_qdot_ = Eigen::Matrix<double, 4, 1>::Zero();
+
     Eigen::Vector3d pos_err_integral_ = Eigen::Vector3d::Zero();
-    Eigen::Vector2d base_err_integral_ = Eigen::Vector2d::Zero();
+    double base_err_integral_ = 0.0; // body-forward position error integral
     double yaw_err_integral_ = 0.0;
 
     bool initialized_ = false;

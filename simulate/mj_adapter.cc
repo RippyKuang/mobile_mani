@@ -9,9 +9,21 @@ MjAdapter::MjAdapter(const char *fn)
 
 void MjAdapter::cb(const mjModel *m, mjData *d)
 {
+    static int ee_body_id = -2; // -2 = not looked up yet
+    if (ee_body_id == -2)
+    {
+        ee_body_id = mj_name2id(m, mjOBJ_BODY, "ur_arm_wrist_3_link");
+    }
+
     Observation obs;
     obs.qpos.assign(d->qpos, d->qpos + m->nq);
     obs.qvel.assign(d->qvel, d->qvel + m->nv);
+    if (ee_body_id >= 0)
+    {
+        // Make sure xpos matches the current qpos (mjcb_control runs before forward).
+        mj_kinematics(m, d);
+        obs.ee_pos.assign(d->xpos + 3 * ee_body_id, d->xpos + 3 * ee_body_id + 3);
+    }
     instance_->curr_obs.write(obs);
 
     Command cmd;

@@ -14,6 +14,10 @@ struct HQPTask {
     Eigen::MatrixXd A;
     Eigen::VectorXd b;
     double weight = 1.0;
+    // Corridor width used when this task is handed to the *next* priority level as a
+    // hard equality. It must be expressed in the task's own units: a fixed 0.05 m/s^2
+    // corridor on a base task is impossible to satisfy, so tolerance is per task.
+    double tolerance = 0.05;
 };
 
 class HQPSolver {
@@ -42,9 +46,9 @@ public:
 
 private:
     int n_vars_;
-    double rho_ = 1e4;        // Penalty on slack variables
+    double rho_ = 1e3;        // Penalty on slack variables
     double lambda_ = 1e-4;    // Tikhonov regularization
-    double delta_ = 0.05;     // Tolerance for preserving higher priority tasks
+    double delta_ = 0.05;     // Fallback tolerance for HQPTask::tolerance
     
     Eigen::VectorXd lb_;
     Eigen::VectorXd ub_;

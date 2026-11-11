@@ -89,7 +89,7 @@
           <geom quat="0 0 0 1" type="mesh" mesh="base"/>
           <body name="ur_arm_shoulder_link" pos="0 0 0.089159">
             <inertial pos="0 0 0" mass="3.7" diaginertia="0.0149724 0.0149724 0.0104063"/>
-            <joint name="ur_arm_shoulder_pan_joint" class ="size3" range="-6.28319 6.28319" actuatorfrcrange="-150 150"/>
+            <joint name="ur_arm_shoulder_pan_joint" class ="size3" actuatorfrcrange="-150 150"/>
             <geom quat="0 0 0 1" type="mesh" mesh="shoulder"/>
             <body name="ur_arm_upper_arm_link" quat="0.707107 0.707107 0 0">
               <inertial pos="-0.2125 0 0.136" quat="0.5 0.5 0.5 0.5" mass="8.393" diaginertia="0.133886 0.133886 0.0151074"/>

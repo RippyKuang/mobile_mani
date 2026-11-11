@@ -140,10 +140,11 @@ bool HQPSolver::solveSingleLevelQP(
 
     OSQPSettings *settings = OSQPSettings_new();
     settings->verbose = 0;
-    settings->eps_abs = 1e-3;
-    settings->eps_rel = 1e-3;
-    settings->max_iter = 4000;
-    settings->adaptive_rho = 0;
+    settings->eps_abs = 1e-4;
+    settings->eps_rel = 1e-4;
+    settings->max_iter = 2000;
+    settings->adaptive_rho = 1;   // OSQP_ADAPTIVE_RHO_UPDATE_ITERATIONS
+    settings->polishing = 0;      // OSQP prints "polishing not needed" on stdout anyway
 
     OSQPSolver *solver = nullptr;
     OSQPInt exitflag = osqp_setup(&solver, &P_csc, q.data(), &A_csc, l_osqp.data(), u_osqp.data(), n_constr, n_var, settings);
@@ -200,18 +201,26 @@ bool HQPSolver::solve(Eigen::VectorXd &x_opt) {
 
         Eigen::MatrixXd A_lvl(total_rows, n_vars_);
         Eigen::VectorXd b_lvl(total_rows);
+        Eigen::VectorXd tol_lvl(total_rows);
         int cur_row = 0;
         for (const auto &t : tasks) {
             int rows = static_cast<int>(t.A.rows());
             A_lvl.block(cur_row, 0, rows, n_vars_) = t.weight * t.A;
             b_lvl.segment(cur_row, rows) = t.weight * t.b;
+            tol_lvl.segment(cur_row, rows) =
+                Eigen::VectorXd::Constant(rows, t.weight * (t.tolerance > 0.0 ? t.tolerance : delta_));
             cur_row += rows;
         }
 
         Eigen::VectorXd x_lvl, slack_lvl;
         bool ok = solveSingleLevelQP(A_lvl, b_lvl, A_eq, b_eq_lb, b_eq_ub, C_user_, lc_user_, uc_user_, x_lvl, slack_lvl);
         if (!ok) {
-         //   std::cerr << "[HQPSolver] Failed to solve priority level " << lvl << std::endl;
+            static int fail_count = 0;
+            if (++fail_count % 200 == 1) {
+                std::cerr << "[HQPSolver] priority level " << lvl << " ("
+                          << (tasks.empty() ? std::string("-") : tasks.front().name)
+                          << ") failed; falling back to the previous level" << std::endl;
+            }
             if (lvl == 0) return false;
             // Fall back to previous level's solution
             break;
@@ -227,8 +236,8 @@ bool HQPSolver::solve(Eigen::VectorXd &x_opt) {
         b_eq_ub.conservativeResize(old_eq_rows + total_rows);
 
         A_eq.block(old_eq_rows, 0, total_rows, n_vars_) = A_lvl;
-        b_eq_lb.segment(old_eq_rows, total_rows) = achieved - Eigen::VectorXd::Constant(total_rows, delta_);
-        b_eq_ub.segment(old_eq_rows, total_rows) = achieved + Eigen::VectorXd::Constant(total_rows, delta_);
+        b_eq_lb.segment(old_eq_rows, total_rows) = achieved - tol_lvl;
+        b_eq_ub.segment(old_eq_rows, total_rows) = achieved + tol_lvl;
     }
 
     x_opt = current_x;

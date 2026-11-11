@@ -61,7 +61,7 @@
       <inertia ixx="3.3212e-3" ixy="0" ixz="0" iyy="6.6424e-3" iyz="0" izz="3.3212e-3" />
     </inertial>
   </link>
-  <joint name="front_left_wheel" type="revolute">
+  <joint name="front_left_wheel" type="fixed">
     <parent link="front_rocker_link" />
     <child link="front_left_wheel_link" />
     <origin rpy="0 0 0" xyz="0 0.27549999999999997 0" />
@@ -86,7 +86,7 @@
       <inertia ixx="3.3212e-3" ixy="0" ixz="0" iyy="6.6424e-3" iyz="0" izz="3.3212e-3" />
     </inertial>
   </link>
-  <joint name="front_right_wheel" type="revolute">
+  <joint name="front_right_wheel" type="fixed">
     <parent link="front_rocker_link" />
     <child link="front_right_wheel_link" />
     <origin rpy="0 0 0" xyz="0 -0.27549999999999997 0" />
@@ -132,7 +132,7 @@
       <inertia ixx="3.3212e-3" ixy="0" ixz="0" iyy="6.6424e-3" iyz="0" izz="3.3212e-3" />
     </inertial>
   </link>
-  <joint name="rear_left_wheel" type="revolute">
+  <joint name="rear_left_wheel" type="fixed">
     <parent link="rear_rocker_link" />
     <child link="rear_left_wheel_link" />
     <origin rpy="0 0 0" xyz="0 0.27549999999999997 0" />
@@ -157,7 +157,7 @@
       <inertia ixx="3.3212e-3" ixy="0" ixz="0" iyy="6.6424e-3" iyz="0" izz="3.3212e-3" />
     </inertial>
   </link>
-  <joint name="rear_right_wheel" type="revolute">
+  <joint name="rear_right_wheel" type="fixed">
     <parent link="rear_rocker_link" />
     <child link="rear_right_wheel_link" />
     <origin rpy="0 0 0" xyz="0 -0.27549999999999997 0" />
@@ -274,6 +274,12 @@
     <child link="top_link" />
   </joint>
   <link name="top_link">
+    <!-- 惯量取自 MuJoCo 按 top.stl 密度算出的值，使 RBDL 与 MJCF 总质量一致 -->
+    <inertial>
+      <origin xyz="0 0 0.276825" rpy="0 0 0" />
+      <mass value="4.228713" />
+      <inertia ixx="0.20428835" ixy="0.00000000" ixz="0.00000000" iyy="0.25534679" iyz="0.00000000" izz="0.45960672" />
+    </inertial>
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0" />
       <geometry>
