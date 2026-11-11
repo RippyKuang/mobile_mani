@@ -44,7 +44,7 @@ private:
     int n_vars_;
     double rho_ = 1e4;        // Penalty on slack variables
     double lambda_ = 1e-4;    // Tikhonov regularization
-    double delta_ = 1e-4;     // Tolerance for preserving higher priority tasks
+    double delta_ = 0.05;     // Tolerance for preserving higher priority tasks
     
     Eigen::VectorXd lb_;
     Eigen::VectorXd ub_;

@@ -140,10 +140,10 @@ bool HQPSolver::solveSingleLevelQP(
 
     OSQPSettings *settings = OSQPSettings_new();
     settings->verbose = 0;
-    settings->eps_abs = 1e-4;
-    settings->eps_rel = 1e-4;
+    settings->eps_abs = 1e-3;
+    settings->eps_rel = 1e-3;
     settings->max_iter = 4000;
-    settings->adaptive_rho = 1;
+    settings->adaptive_rho = 0;
 
     OSQPSolver *solver = nullptr;
     OSQPInt exitflag = osqp_setup(&solver, &P_csc, q.data(), &A_csc, l_osqp.data(), u_osqp.data(), n_constr, n_var, settings);
@@ -156,7 +156,10 @@ bool HQPSolver::solveSingleLevelQP(
     exitflag = osqp_solve(solver);
     bool success = (exitflag == 0) && (solver->info->status_val == OSQP_SOLVED || solver->info->status_val == OSQP_SOLVED_INACCURATE);
     if (!success) {
-        std::cerr << "[HQPSolver] osqp_solve failed with status: " << osqp_error_message(exitflag) << std::endl;
+        static int fail_count = 0;
+        if (++fail_count % 500 == 1) {
+            std::cerr << "[HQPSolver] osqp_solve failed with status: " << solver->info->status << std::endl;
+        }
     } else {
         x_opt.resize(n);
         for (int k = 0; k < n; ++k) {
@@ -208,7 +211,7 @@ bool HQPSolver::solve(Eigen::VectorXd &x_opt) {
         Eigen::VectorXd x_lvl, slack_lvl;
         bool ok = solveSingleLevelQP(A_lvl, b_lvl, A_eq, b_eq_lb, b_eq_ub, C_user_, lc_user_, uc_user_, x_lvl, slack_lvl);
         if (!ok) {
-            std::cerr << "[HQPSolver] Failed to solve priority level " << lvl << std::endl;
+         //   std::cerr << "[HQPSolver] Failed to solve priority level " << lvl << std::endl;
             if (lvl == 0) return false;
             // Fall back to previous level's solution
             break;

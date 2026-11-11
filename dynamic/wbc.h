@@ -24,8 +24,9 @@ struct WBCConfig {
     double kd_posture = 8.0;
 
     // Base Task gains
-    double kp_base = 40.0;
-    double kd_base = 12.0;
+    double kp_base = 5000.0;
+    double kd_base = 50.0;
+    double ki_base = 500.0;
 
     // Joint velocity damping
     double kd_arm = 2.0;
@@ -123,6 +124,7 @@ private:
     double wheel_radius_ = 0.0759;
     double track_half_width_ = 0.2755; // dy
     Eigen::Vector3d pos_err_integral_ = Eigen::Vector3d::Zero();
+    double yaw_err_integral_ = 0.0;
 
     bool initialized_ = false;
 };
