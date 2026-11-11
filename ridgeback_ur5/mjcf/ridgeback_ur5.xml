@@ -128,10 +128,10 @@
 
   <actuator>
  
-    <motor name="front_left_wheel_motor"  joint="front_left_wheel"  ctrlrange="-35 35" ctrllimited="true"/>
-    <motor name="front_right_wheel_motor" joint="front_right_wheel" ctrlrange="-35 35" ctrllimited="true"/>
-    <motor name="rear_left_wheel_motor"   joint="rear_left_wheel"   ctrlrange="-35 35" ctrllimited="true"/>
-    <motor name="rear_right_wheel_motor"  joint="rear_right_wheel"  ctrlrange="-35 35" ctrllimited="true"/>
+    <motor name="front_left_wheel_motor"  joint="front_left_wheel"  ctrlrange="-40 40" ctrllimited="true"/>
+    <motor name="front_right_wheel_motor" joint="front_right_wheel" ctrlrange="-40 40" ctrllimited="true"/>
+    <motor name="rear_left_wheel_motor"   joint="rear_left_wheel"   ctrlrange="-40 40" ctrllimited="true"/>
+    <motor name="rear_right_wheel_motor"  joint="rear_right_wheel"  ctrlrange="-40 40" ctrllimited="true"/>
 
     <motor name="ur_arm_shoulder_pan_motor"  joint="ur_arm_shoulder_pan_joint"  ctrlrange="-150 150" ctrllimited="true"/>
     <motor name="ur_arm_shoulder_lift_motor" joint="ur_arm_shoulder_lift_joint" ctrlrange="-150 150" ctrllimited="true"/>

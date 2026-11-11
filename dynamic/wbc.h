@@ -75,8 +75,7 @@ struct WBCConfig {
     // Flat ground constraint (enforce chassis z, roll, pitch accelerations = 0)
     bool enforce_ground_plane = true;
 
-    // Base mobile mode: if true, base and arm coordinate; if false, base is held stationary
-    bool enable_mobile_base = true;
+
 };
 
 struct WBCTarget {
@@ -116,9 +115,8 @@ public:
                      const Eigen::Vector3d &vel = Eigen::Vector3d::Zero(),
                      bool use_orientation = true);
     void setArmNominalPosture(const Eigen::Matrix<double, 6, 1> &q_nom);
-    void setBaseTarget(const Eigen::Vector2d &pos, double yaw);
-    // Feed-forward overload: yaw_rate/forward_vel remove the lag of a ramp reference.
-    void setBaseTarget(const Eigen::Vector2d &pos, double yaw, double yaw_rate, double forward_vel = 0.0);
+  
+    void setBaseTarget(const Eigen::Vector2d &pos, double yaw, double yaw_rate = 0.0, double forward_vel = 0.0);
 
     // Solve WBC HQP and compute MuJoCo actuator Command
     Command solve(double dt);
@@ -136,19 +134,9 @@ public:
     Eigen::Matrix<double, 6, 1> getArmQ() const;
     Eigen::Matrix<double, 6, 1> getArmQDot() const;
 
-    // Wheel states are telemetry only: the wheels are welded in the RBDL model,
-    // so they have no generalized coordinates. Values come straight from MuJoCo.
-    Eigen::Matrix<double, 4, 1> getWheelQDot() const { return wheel_qdot_; }
-    Eigen::Matrix<double, 4, 1> getWheelQ() const { return wheel_qpos_; }
-
-    const RigidBodyDynamics::Model& getModel() const { return *model_; }
-    WBCConfig& config() { return config_; }
-    const WBCConfig& config() const { return config_; }
-    const WBCTarget& target() const { return target_; }
 
 private:
-    // Resolve and check the RBDL model layout (floating base + 6 arm joints).
-    bool validateModelLayout();
+  
 
     // Peak wheel torque the tyre can transmit before slipping: mu * N * r.
     double wheel_traction_torque() const
@@ -170,13 +158,13 @@ private:
     RigidBodyDynamics::Math::MatrixNd M_;
     RigidBodyDynamics::Math::VectorNd h_;
 
-    // Model layout: 12 DoF = floating base (6) + arm (6); wheels are welded.
+    // Model layout: 12 DoF = floating base (6) + arm (6);
     // q layout: [0..2]=base xyz, [3..5]=quat xyz, [6..11]=arm, [12]=quat w (RBDL 3.x).
     int nv_ = 0;
     std::array<int, 6> arm_q_idx_{};
-    std::array<int, 6> arm_dof_idx_{};
 
-    // Body IDs (resolved by name in validateModelLayout(), never hard-coded)
+
+    // Body IDs 
     unsigned int base_body_id_ = 0;
     unsigned int ee_body_id_ = 0;
     RigidBodyDynamics::Math::Vector3d ee_point_offset_ = RigidBodyDynamics::Math::Vector3d::Zero();
@@ -185,15 +173,12 @@ private:
     double wheel_radius_ = 0.0759;
     double track_half_width_ = 0.2755; // dy
 
-    // Wheel telemetry from MuJoCo (no generalized coordinates in the model)
-    Eigen::Matrix<double, 4, 1> wheel_qpos_ = Eigen::Matrix<double, 4, 1>::Zero();
-    Eigen::Matrix<double, 4, 1> wheel_qdot_ = Eigen::Matrix<double, 4, 1>::Zero();
+
 
     Eigen::Vector3d pos_err_integral_ = Eigen::Vector3d::Zero();
     double base_err_integral_ = 0.0; // body-forward position error integral
     double yaw_err_integral_ = 0.0;
 
-    bool initialized_ = false;
 };
 
-} // namespace dynamic
+} 

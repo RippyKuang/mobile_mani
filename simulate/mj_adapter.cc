@@ -18,12 +18,7 @@ void MjAdapter::cb(const mjModel *m, mjData *d)
     Observation obs;
     obs.qpos.assign(d->qpos, d->qpos + m->nq);
     obs.qvel.assign(d->qvel, d->qvel + m->nv);
-    if (ee_body_id >= 0)
-    {
-        // Make sure xpos matches the current qpos (mjcb_control runs before forward).
-        mj_kinematics(m, d);
-        obs.ee_pos.assign(d->xpos + 3 * ee_body_id, d->xpos + 3 * ee_body_id + 3);
-    }
+  
     instance_->curr_obs.write(obs);
 
     Command cmd;
