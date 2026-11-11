@@ -13,9 +13,9 @@ namespace dynamic {
 
 struct WBCConfig {
     // End-Effector Task gains
-    double kp_ee_pos = 150.0;
+    double kp_ee_pos = 300.0;
     double kd_ee_pos = 25.0;
-    double ki_ee_pos = 30.0;
+    double ki_ee_pos = 100.0;
     double kp_ee_rot = 100.0;
     double kd_ee_rot = 20.0;
 
@@ -124,6 +124,7 @@ private:
     double wheel_radius_ = 0.0759;
     double track_half_width_ = 0.2755; // dy
     Eigen::Vector3d pos_err_integral_ = Eigen::Vector3d::Zero();
+    Eigen::Vector2d base_err_integral_ = Eigen::Vector2d::Zero();
     double yaw_err_integral_ = 0.0;
 
     bool initialized_ = false;

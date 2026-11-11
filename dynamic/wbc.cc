@@ -345,13 +345,14 @@ namespace dynamic
             hqp_solver_->addTask(0, HQPTask{"EE_Position_Tracking", A_ee, b_ee, 1.0});
         }
 
-        Eigen::VectorXd b_base = Eigen::VectorXd::Zero(1);
+        Eigen::VectorXd b_base = Eigen::VectorXd::Zero(3);
         if (config_.enable_mobile_base)
         {
             // Base planar posture task (x, y, yaw)
-            Eigen::MatrixXd A_base = Eigen::MatrixXd::Zero(1, 16);
+            Eigen::MatrixXd A_base = Eigen::MatrixXd::Zero(3, 16);
             A_base(0, 5) = 1.0; // RZ
-       
+            A_base(1, 1) = 1.0; // TX
+            A_base(2, 2) = 1.0; // TY
 
             double yaw_curr = getBaseYaw();
             double yaw_diff = target_.base_yaw_des - yaw_curr;
@@ -360,10 +361,21 @@ namespace dynamic
             while (yaw_diff < -M_PI)
                 yaw_diff += 2.0 * M_PI;
 
+            Eigen::Vector3d base_pos = getBasePosition();
+
+            Eigen::Vector2d pos_diff = target_.base_pos_des - Eigen::Vector2d{base_pos.x(), base_pos.y()};
 
             yaw_err_integral_ += yaw_diff * dt;
-            yaw_err_integral_ = std::clamp(yaw_err_integral_, -10.0,10.0);
-            b_base[0] = config_.kp_base * yaw_diff  + config_.ki_base * yaw_err_integral_;
+            yaw_err_integral_ = std::clamp(yaw_err_integral_, -10.0, 10.0);
+
+            base_err_integral_ += pos_diff * dt;
+            for (int i = 0; i < 2; ++i)
+                base_err_integral_[i] = std::clamp(base_err_integral_[i], -50.0, 50.0);
+            
+
+            b_base[0] = config_.kp_base * yaw_diff + config_.ki_base * yaw_err_integral_;
+            b_base[1] = config_.kp_base * pos_diff[0]+ config_.ki_base * base_err_integral_[0];
+            b_base[2] = config_.kp_base * pos_diff[1]+ config_.ki_base * base_err_integral_[1];
 
             hqp_solver_->addTask(1, HQPTask{"Base_Posture", A_base, b_base, 1.0});
         }
@@ -383,7 +395,6 @@ namespace dynamic
 
         Eigen::VectorXd tau_gen = M_ * qddot_opt + h_;
 
-    
         for (int i = 0; i < 6; ++i)
         {
             double tau_arm = tau_gen[10 + i] - config_.kd_arm * qdot_[10 + i];
@@ -391,7 +402,6 @@ namespace dynamic
             cmd.ctrl[4 + i] = tau_arm;
         }
 
-    
         if (config_.enable_mobile_base)
         {
             double yaw = getBaseYaw();
@@ -413,7 +423,7 @@ namespace dynamic
         }
         else
         {
-           
+
             for (int i = 0; i < 4; ++i)
             {
                 double tau_w = -config_.kd_wheel * 5.0 * qdot_[6 + i];
@@ -424,4 +434,4 @@ namespace dynamic
         return cmd;
     }
 
-} 
+}

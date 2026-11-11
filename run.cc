@@ -22,8 +22,6 @@ int main()
         robot_urdf = "ridgeback_ur5/urdf/ridgeback_ur5.urdf";
     }
 
-   
-   
     MjAdapter mj(scene_xml.c_str());
 
     dynamic::MobileManipulatorWBC wbc;
@@ -35,7 +33,6 @@ int main()
     config.kp_posture = 25.0;
     config.kd_posture = 8.0;
 
-
     config.enable_mobile_base = true;
 
     if (!wbc.init(robot_urdf, config))
@@ -43,7 +40,6 @@ int main()
         std::cerr << "[run] Failed to initialize WBC controller!" << std::endl;
         return 1;
     }
-
 
     std::cout << "[run] Waiting for initial MuJoCo observation..." << std::endl;
     Observation obs;
@@ -60,9 +56,7 @@ int main()
     Eigen::Vector3d init_base_pos = wbc.getBasePosition();
     double init_base_yaw = wbc.getBaseYaw();
 
-  
-
-    init_ee_pos.z() = 0.8; 
+    init_ee_pos.z() = 0.8;
 
     wbc.setArmNominalPosture(wbc.getArmQ());
     wbc.setBaseTarget(Eigen::Vector2d(init_base_pos.x(), init_base_pos.y()), init_base_yaw);
@@ -71,24 +65,20 @@ int main()
     double sim_time = 0.0;
     auto last_log_time = std::chrono::steady_clock::now();
 
-
     while (true)
     {
         auto loop_start = std::chrono::steady_clock::now();
 
-    
         obs = mj.get_obs();
         if (!obs.qpos.empty())
         {
             wbc.update(obs);
         }
 
-     
         Eigen::Vector3d target_ee_pos = init_ee_pos;
         Eigen::Vector3d target_ee_vel = Eigen::Vector3d::Zero();
         wbc.setEETarget(target_ee_pos, init_ee_rot, target_ee_vel);
 
-       
         const double omega = 0.3;
 
         Eigen::Vector2d target_base_pos(init_base_pos.x(), init_base_pos.y());
@@ -98,14 +88,8 @@ int main()
 
         target_base_yaw = init_base_yaw + theta;
 
-        while (target_base_yaw > M_PI)
-            target_base_yaw -= 2.0 * M_PI;
-        while (target_base_yaw < -M_PI)
-            target_base_yaw += 2.0 * M_PI;
-
         wbc.setBaseTarget(target_base_pos, target_base_yaw);
 
-     
         Command cmd = wbc.solve(dt);
 
         mj.set_cmd(cmd);
@@ -118,14 +102,20 @@ int main()
             last_log_time = now;
             Eigen::Vector3d curr_ee = wbc.getEEPosition();
             Eigen::Vector3d curr_base = wbc.getBasePosition();
+
             double curr_base_yaw = wbc.getBaseYaw();
             double pos_err_norm = (target_ee_pos - curr_ee).norm();
+            double base_err_norm = (target_base_pos -  Eigen::Vector2d{curr_base.x(),curr_base.y()}).norm();
+            double yaw_err = target_base_yaw - curr_base_yaw;
+            while (yaw_err > M_PI)
+                yaw_err -= 2.0 * M_PI;
+            while (yaw_err < -M_PI)
+                yaw_err += 2.0 * M_PI;
             std::cout << std::fixed << std::setprecision(3)
                       << "[t=" << sim_time << "s] "
                       << "EE Err: " << std::setprecision(2) << pos_err_norm * 1000.0 << " mm | "
-                      << "Base Des: [" << target_base_pos.x() << ", " << target_base_pos.y() << "], Yaw: " << target_base_yaw << " | "
-                      << "Base Act: [" << curr_base.x() << ", " << curr_base.y() << "], Yaw: " << curr_base_yaw << " | "
-                      << "Wheel Ctrl: [" << cmd.ctrl[0] << ", " << cmd.ctrl[1] << ", " << cmd.ctrl[2] << ", " << cmd.ctrl[3] << "]"
+                      << "BasePos Err: " << std::setprecision(2) << base_err_norm * 1000.0 << " mm | "
+                      << "Yaw Err:" << yaw_err<< " | "
                       << std::endl;
         }
 
