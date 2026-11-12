@@ -20,10 +20,9 @@ namespace dynamic
         return angle;
     }
 
-    inline double antiWindupIntegrate(double error, double integral, double dt)
+    inline double Integrate(double error, double integral, double dt)
     {
-        if (error * integral < 0.0)
-            return 0.0;
+
         return integral + error * dt;
     }
 
@@ -201,6 +200,11 @@ namespace dynamic
         return std::atan2(rot(1, 0), rot(0, 0));
     }
 
+    double MobileManipulatorWBC::getBaseAngularVelocity() const
+    {
+        return qdot_[5];
+    }
+
     Eigen::Matrix<double, 6, 1> MobileManipulatorWBC::getArmQ() const
     {
         Eigen::Matrix<double, 6, 1> arm_q;
@@ -230,7 +234,7 @@ namespace dynamic
         // 0. 非完整约束：差速底盘不能产生横向加速度。
         //    横向方向 = 航向的法向 (-sin, cos)。不加这条，EE 任务会通过
         //    "横向推底盘"来跟踪末端（轮子做不到），导致打滑、漂移、末端跟不上。
-     
+
         Eigen::MatrixXd C_nh = Eigen::MatrixXd::Zero(1, nv_);
         C_nh(0, 0) = -s;
         C_nh(0, 1) = c;
@@ -311,7 +315,7 @@ namespace dynamic
         {
             Eigen::MatrixXd A_ee = J6D_rbd;
             Eigen::VectorXd b_ee(6);
-          
+
             b_ee.head<3>() = a_rot_des - Eigen::Vector3d(bias6D[0], bias6D[1], bias6D[2]);
             b_ee.tail<3>() = a_pos_des - Eigen::Vector3d(bias6D[3], bias6D[4], bias6D[5]);
             hqp_solver_->addTask(1, HQPTask{"EE_Pose_Tracking", A_ee, b_ee, 1.0, 0.5});
@@ -324,7 +328,6 @@ namespace dynamic
         }
 
         // Task Level 0: base planar tracking
-       
 
         Eigen::MatrixXd A_base = Eigen::MatrixXd::Zero(2, nv_);
 
@@ -333,11 +336,11 @@ namespace dynamic
         A_base(1, 5) = 1.0; // yaw acceleration
 
         // ---- yaw loop ----
-        const double yaw_err = wrapToPi(target_.base_yaw_des - yaw);
+        const double yaw_err = std::abs(wrapToPi(target_.base_yaw_des - yaw));
         const double yaw_rate = qdot_[5];
-        yaw_err_integral_ = antiWindupIntegrate(yaw_err, yaw_err_integral_, dt);
-        const double yaw_int = std::clamp(config_.ki_base_yaw * yaw_err_integral_,
-                                          -config_.base_int_limit, config_.base_int_limit);
+        yaw_err_integral_ = Integrate(yaw_err, yaw_err_integral_, dt);
+        const double yaw_int = config_.ki_base_yaw * std::clamp(yaw_err_integral_,
+                                                                -config_.base_int_limit, config_.base_int_limit);
         double a_yaw_des = config_.kp_base_yaw * yaw_err +
                            config_.kd_base_yaw * (target_.base_yaw_rate_des - yaw_rate) +
                            yaw_int;
@@ -348,9 +351,9 @@ namespace dynamic
             target_.base_pos_des - Eigen::Vector2d(base_pos.x(), base_pos.y());
         const double e_fwd = err_world.dot(Eigen::Vector2d(c, s));
         const double v_fwd = qdot_[0] * c + qdot_[1] * s;
-        base_err_integral_ = antiWindupIntegrate(e_fwd, base_err_integral_, dt);
-        const double fwd_int = std::clamp(config_.ki_base_x * base_err_integral_,
-                                          -config_.base_int_limit, config_.base_int_limit);
+        base_err_integral_ = Integrate(e_fwd, base_err_integral_, dt);
+        const double fwd_int = config_.ki_base_x * std::clamp(base_err_integral_,
+                                                              -config_.base_int_limit, config_.base_int_limit);
         double a_fwd_des = config_.kp_base_x * e_fwd +
                            config_.kd_base_x * (target_.base_forward_vel_des - v_fwd) +
                            fwd_int;
@@ -404,28 +407,19 @@ namespace dynamic
 
         // tau_gen[0..5] is the net wrench on the floating base, expressed in the
         // world frame for TX/TY and in the body frame for RZ.
-      
+
         const double Fx = tau_gen[0] * c + tau_gen[1] * s;
-        const double Mz = tau_gen[5];
+        double ff = 300 + 50 * (target_.base_yaw_rate_des - qdot_[5]) + yaw_err_integral_;
+        //     std::cout << target_.base_yaw_rate_des - qdot_[5] << std::endl;
+
+        const double Mz = tau_gen[5] + ff * std::tanh((target_.base_yaw_rate_des - qdot_[5]) / 0.005);
 
         double tau_fwd = (Fx / 4.0) * wheel_radius_;
-        double tau_yaw = (Mz / (4.0 * track_half_width_)) * wheel_radius_ * config_.yaw_torque_gain;
+        double tau_yaw = (Mz / (4.0 * track_half_width_)) * wheel_radius_;
 
-        // Skid-stiction feed-forward: the rigid-body model knows nothing about the
-        // lateral scrubbing of four wheels, so its torque demand sits in the
-        // friction dead zone and the base never turns. Bias the differential in
-        // the direction the yaw-rate error asks for, with a smooth sign().
-       const double rate_err = target_.base_yaw_rate_des - qdot_[5];
-       tau_yaw += config_.tau_scrub_ff;
-
-        // Allocate the per-wheel torque budget YAW FIRST (the reference is the yaw
-        // ramp, so yaw tracking has priority and the residual goes to the position
-        // loop). Doing it the other way round let a drifting base starve the
-        // differential and stall the rotation.
+       
         const double limit = config_.tau_wheel_max;
-        // Beyond the traction breakaway point the wheels break loose and the yaw
-        // response turns into stick-slip; never command past tau_diff_max.
-     //   const double yaw_cap = std::min(limit, config_.tau_diff_max);
+      
         tau_yaw = std::clamp(tau_yaw, -limit, limit);
 
         const double room_fwd = std::max(0.0, limit - std::abs(tau_yaw));

@@ -29,10 +29,10 @@ struct WBCConfig {
     // the heading. Both rows are accelerations, hence kp in 1/s^2 and kd in 1/s.
     double kp_base_x = 4.0;       // 1/s^2
     double kd_base_x = 4.0;       // 1/s
-    double ki_base_x = 0.5;       // 1/s^3
+    double ki_base_x = 0.0;       // 1/s^3
     double kp_base_yaw = 3.0;     // 1/s^2 (low: the yaw plant is stiction dominated)
     double kd_base_yaw = 3.0;     // 1/s
-    double ki_base_yaw = 1.0;     // 1/s^3
+    double ki_base_yaw = 5.0;     // 1/s^3
     double base_acc_limit = 10.0; // clamp on the base task desired accel (m/s^2, rad/s^2);
                               // the position loop does not need qdd_max and a huge value
                               // only makes it steal the wheel torque budget
@@ -54,18 +54,7 @@ struct WBCConfig {
     double tau_arm_max = 150.0;   // Max arm torque (Nm)
     double tau_wheel_max = 35.0;  // Max wheel torque (Nm)
 
-    // Skid-steer traction model. Measured on this MuJoCo model: a differential wheel
-    // torque below ~25 Nm only creeps (0.03 rad/s) while above ~28 Nm the wheels break
-    // loose (wheelspin 50-200 rad/s) and the base drifts 0.3-1.1 m, so the useful
-    // window is narrow. The rigid-body model has no skid friction at all, so the
-    // torque computed from Izz*qddot is always far below the stiction threshold --
-    // tau_scrub_ff supplies the missing friction feed-forward.
-    double tau_scrub_ff = 13.5;  // differential torque feed-forward for skid stiction (Nm);
-                              // the effective mu is now 0.5 (floor set explicitly), which puts
-                              // the skid breakaway at ~13 Nm instead of ~26 Nm
-    double yaw_rate_deadband = 0.05; // rad/s, smooths the sign() of the feed-forward
-    double tau_diff_max = 30.0;   // Max |differential| wheel torque (Nm)
-    double yaw_torque_gain = 1.0; // Maps yaw moment demand to wheel torque (tune 0.7-1.2)
+  
     // The floor now declares friction explicitly in scene.xml, so the wheels' 0.5 is
     // no longer overridden by MuJoCo's element-wise max() combination rule.
     double wheel_friction = 0.5;  // Effective friction coefficient for the traction cap
@@ -74,7 +63,6 @@ struct WBCConfig {
 
     // Flat ground constraint (enforce chassis z, roll, pitch accelerations = 0)
     bool enforce_ground_plane = true;
-
 
 };
 
@@ -130,20 +118,14 @@ public:
     Eigen::Vector3d getBasePosition() const;
     Eigen::Matrix3d getBaseRotation() const;
     double getBaseYaw() const;
+    double getBaseAngularVelocity() const;
     
     Eigen::Matrix<double, 6, 1> getArmQ() const;
     Eigen::Matrix<double, 6, 1> getArmQDot() const;
 
 
 private:
-  
-
-    // Peak wheel torque the tyre can transmit before slipping: mu * N * r.
-    double wheel_traction_torque() const
-    {
-        const double normal_force = config_.robot_mass * 9.81 * config_.wheel_load_fraction;
-        return config_.wheel_friction * normal_force * wheel_radius_;
-    }
+    
 
     std::unique_ptr<RigidBodyDynamics::Model> model_;
     std::unique_ptr<HQPSolver> hqp_solver_;

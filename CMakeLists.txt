@@ -3,6 +3,7 @@ project(run VERSION 1.0)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++20 -O3 -g3")
 
 find_package(PkgConfig REQUIRED)
+find_package(rtplot CONFIG REQUIRED)
 
 add_subdirectory(simulate)
 add_subdirectory(dynamic)
@@ -18,4 +19,4 @@ target_include_directories(run PUBLIC
                           ${EIGEN3_INCLUDE_DIR} 
                           )
 
-target_link_libraries(run PUBLIC mj wbc)
+target_link_libraries(run PUBLIC mj wbc  rtplot::core)
