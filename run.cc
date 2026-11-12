@@ -13,8 +13,7 @@
 
 namespace
 {
-    constexpr double kBaseYawRate = 0.5; // rad/s，底盘恒定原地旋转角速度
-
+    constexpr double kBaseYawRate = 0.5; // rad/s
     const Eigen::Vector3d kEeTargetOffset(0.55, 0.10, 0.55);
 }
 
@@ -22,8 +21,8 @@ int main()
 {
 
     rtplot::LoggerConfig cfg;
-    cfg.persist = false;    // no .db
-    cfg.shmPublish = true; // publish /rtplot_ctrl
+    cfg.persist = false;    
+    cfg.shmPublish = true; 
     cfg.flushIntervalMs = 2;
     cfg.flushOnSignal = true;
 
