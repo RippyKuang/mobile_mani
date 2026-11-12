@@ -31,8 +31,8 @@ struct WBCConfig {
     double kd_base_x = 4.0;       // 1/s
     double ki_base_x = 0.0;       // 1/s^3
     double kp_base_yaw = 3.0;     // 1/s^2 (low: the yaw plant is stiction dominated)
-    double kd_base_yaw = 3.0;     // 1/s
-    double ki_base_yaw = 5.0;     // 1/s^3
+    double kd_base_yaw = 5.0;     // 1/s
+    double ki_base_yaw = 0.0;     // 1/s^3
     double base_acc_limit = 10.0; // clamp on the base task desired accel (m/s^2, rad/s^2);
                               // the position loop does not need qdd_max and a huge value
                               // only makes it steal the wheel torque budget

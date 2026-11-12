@@ -13,16 +13,17 @@ namespace dynamic
 
     inline double wrapToPi(double angle)
     {
-        while (angle > M_PI)
+        while (angle > 2.0 * M_PI)
             angle -= 2.0 * M_PI;
-        while (angle < -M_PI)
+        while (angle < -2.0 * M_PI)
             angle += 2.0 * M_PI;
         return angle;
     }
 
     inline double Integrate(double error, double integral, double dt)
     {
-
+        if (error * integral < 0.0)
+            return 0.0;
         return integral + error * dt;
     }
 
@@ -292,7 +293,10 @@ namespace dynamic
         pos_err_integral_ += pos_err * dt;
         for (int i = 0; i < 3; ++i)
         {
-            pos_err_integral_[i] = std::clamp(pos_err_integral_[i], -0.2, 0.2);
+            if (pos_err_integral_[i] * pos_err[i] < 0.0)
+                pos_err_integral_[i] = 0.0;
+            else
+                pos_err_integral_[i] = std::clamp(pos_err_integral_[i], -0.2, 0.2);
         }
         Eigen::Vector3d a_pos_des = target_.ee_acc_des + config_.kp_ee_pos * pos_err + config_.kd_ee_pos * vel_err + config_.ki_ee_pos * pos_err_integral_;
 
@@ -336,7 +340,7 @@ namespace dynamic
         A_base(1, 5) = 1.0; // yaw acceleration
 
         // ---- yaw loop ----
-        const double yaw_err = std::abs(wrapToPi(target_.base_yaw_des - yaw));
+        const double yaw_err = wrapToPi(target_.base_yaw_des - yaw);
         const double yaw_rate = qdot_[5];
         yaw_err_integral_ = Integrate(yaw_err, yaw_err_integral_, dt);
         const double yaw_int = config_.ki_base_yaw * std::clamp(yaw_err_integral_,
@@ -409,17 +413,16 @@ namespace dynamic
         // world frame for TX/TY and in the body frame for RZ.
 
         const double Fx = tau_gen[0] * c + tau_gen[1] * s;
-        double ff = 300 + 50 * (target_.base_yaw_rate_des - qdot_[5]) + yaw_err_integral_;
+        const double ff = 200 ;
         //     std::cout << target_.base_yaw_rate_des - qdot_[5] << std::endl;
 
-        const double Mz = tau_gen[5] + ff * std::tanh((target_.base_yaw_rate_des - qdot_[5]) / 0.005);
+        const double Mz = tau_gen[5] + ff * std::tanh((target_.base_yaw_rate_des) / 0.005);
 
         double tau_fwd = (Fx / 4.0) * wheel_radius_;
         double tau_yaw = (Mz / (4.0 * track_half_width_)) * wheel_radius_;
 
-       
         const double limit = config_.tau_wheel_max;
-      
+
         tau_yaw = std::clamp(tau_yaw, -limit, limit);
 
         const double room_fwd = std::max(0.0, limit - std::abs(tau_yaw));
