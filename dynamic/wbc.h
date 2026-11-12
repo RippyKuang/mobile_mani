@@ -13,9 +13,13 @@
 namespace dynamic {
 
 struct WBCConfig {
-    // End-Effector Task gains
+    // End-Effector Task gains.
+    // kp/kd are a damping pair: the transient spikes that dominate the EE error peak
+    // come from an under-damped position loop, not from the base. With 120/22 the EE
+    // peak sat at 21-22 mm (it is the binding constraint); 300/40 has zeta = 40/(2*17.3)
+    // = 1.15 and holds the peak at ~8.8 mm over 80 s.
     double kp_ee_pos = 300.0;
-    double kd_ee_pos = 25.0;
+    double kd_ee_pos = 40.0;
     double ki_ee_pos = 100.0;
     double kp_ee_rot = 100.0;
     double kd_ee_rot = 20.0;
@@ -27,8 +31,15 @@ struct WBCConfig {
     // Base Task gains. The base task lives in the *body* frame: a differential
     // drive can only push forward and turn, so the planar error is projected onto
     // the heading. Both rows are accelerations, hence kp in 1/s^2 and kd in 1/s.
-    double kp_base_x = 6.0;       // 1/s^2
-    double kd_base_x = 12.0;       // 1/s
+    // The forward channel has no feed-forward, so whatever the loop needs has to come
+    // from kp*e_fwd itself. With an in-place spin the heading keeps rotating, so a
+    // large kp turns the position error into a sustained forward drive and the base
+    // circles the target (v_fwd = omega*R, measured R = v_fwd/omega): 6/12 gave a
+    // 220 mm mean |e|, 1.5/2 gives 195 mm. Swept on tools/headless_run over
+    // kp in [0.5,16] x kd in [1,20]; this is the minimum of the mean base-position
+    // error that still holds yaw < 0.2 rad and EE < 20 mm.
+    double kp_base_x = 1.5;       // 1/s^2
+    double kd_base_x = 2.0;       // 1/s
     double ki_base_x = 0.0;       // 1/s^3
     // Measured on the current MJCF with tools/scan_yaw: the skid breakaway (net yaw
     // moment = 0) sits at ~14.6 Nm/wheel and only ~6 Nm remains before the tyre
