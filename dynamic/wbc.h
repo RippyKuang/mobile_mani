@@ -30,8 +30,15 @@ struct WBCConfig {
     double kp_base_x = 4.0;       // 1/s^2
     double kd_base_x = 4.0;       // 1/s
     double ki_base_x = 0.0;       // 1/s^3
-    double kp_base_yaw = 3.0;     // 1/s^2 (low: the yaw plant is stiction dominated)
-    double kd_base_yaw = 5.0;     // 1/s
+    // Measured on the current MJCF with tools/scan_yaw: the skid breakaway (net yaw
+    // moment = 0) sits at ~14.6 Nm/wheel and only ~6 Nm remains before the tyre
+    // traction limit (mu*N*r = 20.5 Nm), so the plant is steep there -- 14 Nm/wheel
+    // holds 0.06 rad/s while 16 Nm/wheel holds 1.3 rad/s. A soft loop leaves a large
+    // standing yaw error and lets the stick-slip run; the stiff gains below are what
+    // actually suppresses it (verified over 60 s in tools/headless_run: yaw error
+    // max 0.09 rad at 0.5 rad/s).
+    double kp_base_yaw = 15.0;    // 1/s^2
+    double kd_base_yaw = 24.0;    // 1/s
     double ki_base_yaw = 0.0;     // 1/s^3
     double base_acc_limit = 10.0; // clamp on the base task desired accel (m/s^2, rad/s^2);
                               // the position loop does not need qdd_max and a huge value
@@ -63,6 +70,20 @@ struct WBCConfig {
 
     // Flat ground constraint (enforce chassis z, roll, pitch accelerations = 0)
     bool enforce_ground_plane = true;
+
+    // ---- yaw channel: how the QP yaw demand becomes a wheel differential ----
+    // The rigid-body model has no lateral tyre scrub, so the yaw torque derived from
+    // Izz*qddot lands inside the skid-stiction dead zone. These parameters add the
+    // missing breakaway torque and bound what reaches the wheels.
+    double yaw_ff_ramp = 0.05;         // rad/s; tanh soft-start width of the reference sign
+    // 215 Nm of yaw moment == 14.8 Nm of differential per wheel, i.e. just above the
+    // measured scrubbing breakaway of ~14.6 Nm, so the loop does not have to supply the
+    // breakaway torque through a standing angle error.
+    double yaw_moment_ff = 215.0;      // Nm; constant yaw-moment feed-forward (scrub bias)
+ 
+
+
+
 
 };
 

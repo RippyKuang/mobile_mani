@@ -3,7 +3,13 @@
 #include <thread>
 #include <vector>
 #include <atomic>
-#include "core.h"
+
+#include <mujoco/mujoco.h>
+
+// Defined in simulate/mujoco/core.cc. Declared here instead of including core.h so
+// that consumers of this header (notably dynamic/wbc.h, which is reused by the
+// headless tools) do not drag in the GLFW-based simulate UI headers.
+void start_simulate(const char* filename);
 
 struct Observation
 {

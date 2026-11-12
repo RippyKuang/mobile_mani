@@ -13,9 +13,9 @@ namespace dynamic
 
     inline double wrapToPi(double angle)
     {
-        while (angle > 2.0 * M_PI)
+        while (angle > M_PI)
             angle -= 2.0 * M_PI;
-        while (angle < -2.0 * M_PI)
+        while (angle < -M_PI)
             angle += 2.0 * M_PI;
         return angle;
     }
@@ -413,30 +413,31 @@ namespace dynamic
         // world frame for TX/TY and in the body frame for RZ.
 
         const double Fx = tau_gen[0] * c + tau_gen[1] * s;
-        const double ff = 200 ;
-        //     std::cout << target_.base_yaw_rate_des - qdot_[5] << std::endl;
+        const double Mz_raw = tau_gen[5];
 
-        const double Mz = tau_gen[5] + ff * std::tanh((target_.base_yaw_rate_des) / 0.005);
+        const double ff = config_.yaw_moment_ff;
+        const double Mz = Mz_raw + ff * std::tanh(target_.base_yaw_rate_des / config_.yaw_ff_ramp);
 
         double tau_fwd = (Fx / 4.0) * wheel_radius_;
         double tau_yaw = (Mz / (4.0 * track_half_width_)) * wheel_radius_;
 
+       
         const double limit = config_.tau_wheel_max;
 
         tau_yaw = std::clamp(tau_yaw, -limit, limit);
 
+    
         const double room_fwd = std::max(0.0, limit - std::abs(tau_yaw));
         tau_fwd = std::clamp(tau_fwd, -room_fwd, room_fwd);
 
-        const double fl = std::clamp(tau_fwd - tau_yaw, -config_.tau_wheel_max, config_.tau_wheel_max);
-        const double fr = std::clamp(tau_fwd + tau_yaw, -config_.tau_wheel_max, config_.tau_wheel_max);
-        const double rl = fl;
-        const double rr = fr;
+        const double fl = std::clamp(tau_fwd - tau_yaw, -limit, limit);
+        const double fr = std::clamp(tau_fwd + tau_yaw, -limit, limit);
+
 
         cmd.ctrl[0] = fl;
         cmd.ctrl[1] = fr;
-        cmd.ctrl[2] = rl;
-        cmd.ctrl[3] = rr;
+        cmd.ctrl[2] = fl;
+        cmd.ctrl[3] = fr;
 
         return cmd;
     }
