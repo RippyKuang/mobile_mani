@@ -27,8 +27,8 @@ struct WBCConfig {
     // Base Task gains. The base task lives in the *body* frame: a differential
     // drive can only push forward and turn, so the planar error is projected onto
     // the heading. Both rows are accelerations, hence kp in 1/s^2 and kd in 1/s.
-    double kp_base_x = 4.0;       // 1/s^2
-    double kd_base_x = 4.0;       // 1/s
+    double kp_base_x = 6.0;       // 1/s^2
+    double kd_base_x = 12.0;       // 1/s
     double ki_base_x = 0.0;       // 1/s^3
     // Measured on the current MJCF with tools/scan_yaw: the skid breakaway (net yaw
     // moment = 0) sits at ~14.6 Nm/wheel and only ~6 Nm remains before the tyre
